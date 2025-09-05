@@ -31,7 +31,7 @@ export default function RootLayout({
       >
         <ThemeProviderClient>
           <div className="min-h-dvh grid grid-rows-[auto_1fr]">
-            <header className="border-b border-border bg-panel/60 backdrop-blur supports-[backdrop-filter]:bg-panel/60">
+            <header className="border-b border-border bg-panel backdrop-blur supports-[backdrop-filter]:bg-panel">
               <div className="mx-auto w-full max-w-6xl px-4 py-3 flex items-center justify-between">
                 <h1 className="text-sm sm:text-base font-medium tracking-tight">
                   Fullstack OrderBook

@@ -9,12 +9,7 @@ type ThemeProviderClientProps = {
 
 export function ThemeProviderClient({ children }: ThemeProviderClientProps) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="dark"
-      enableSystem={false}
-      disableTransitionOnChange
-    >
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
       {children}
     </ThemeProvider>
   );

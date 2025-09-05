@@ -7,6 +7,7 @@ import type { SymbolCode, L2Level } from "@/lib/hyperliquid/types";
 export interface OrderBookState {
   symbol: SymbolCode;
   nSigFigs: number;
+  displayCurrency: "USD" | "COIN";
   bids: L2Level[];
   asks: L2Level[];
   connected: boolean;
@@ -23,6 +24,7 @@ class OrderBookDataSource {
   private current: OrderBookState = {
     symbol: "BTC",
     nSigFigs: 2,
+    displayCurrency: "COIN",
     bids: [],
     asks: [],
     connected: false,
@@ -95,6 +97,12 @@ class OrderBookDataSource {
     this.emit();
   }
 
+  setDisplayCurrency(currency: "USD" | "COIN") {
+    if (currency === this.current.displayCurrency) return;
+    this.current = { ...this.current, displayCurrency: currency };
+    this.emit();
+  }
+
   pause() {
     if (this.current.paused) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
@@ -139,6 +147,10 @@ export function setOrderBookSymbol(symbol: SymbolCode) {
 
 export function setOrderBookSigFigs(nSigFigs: number) {
   dataSource.setSigFigs(nSigFigs);
+}
+
+export function setOrderBookDisplayCurrency(currency: "USD" | "COIN") {
+  dataSource.setDisplayCurrency(currency);
 }
 
 export function pauseOrderBook() {

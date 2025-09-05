@@ -22,7 +22,7 @@ export function OrderBookPreview() {
   );
 
   return (
-    <section className="rounded-md border border-border bg-card p-4">
+    <section className="rounded-md border border-border bg-panel p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium">Order Book (preview)</h2>
         <div className="flex items-center gap-2">
