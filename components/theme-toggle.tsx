@@ -9,6 +9,7 @@ export function ThemeToggle() {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
+    // Edge case for hydration mismatch
     setMounted(true);
   }, []);
 
