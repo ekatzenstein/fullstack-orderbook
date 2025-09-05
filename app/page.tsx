@@ -1,9 +1,9 @@
-import { OrderBookPreview } from "@/components/orderbook-preview";
+import { OrderBook } from "@/components/orderbook";
 
 export default function Home() {
   return (
     <div className="grid gap-6">
-      <OrderBookPreview />
+      <OrderBook />
     </div>
   );
 }

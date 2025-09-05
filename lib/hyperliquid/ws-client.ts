@@ -30,9 +30,6 @@ export class HyperliquidWsClient {
   connect(): void {
     if (this.ws) return;
     this.isManuallyClosed = false;
-    if (typeof window !== "undefined") {
-      console.info("[HL-WS] connecting", this.url);
-    }
     this.ws = new WebSocket(this.url);
     this.ws.addEventListener("open", (ev) => {
       this.startHeartbeat();
@@ -40,9 +37,6 @@ export class HyperliquidWsClient {
       if (this.sendQueue.length) {
         this.sendQueue.forEach((msg) => this.ws?.send(msg));
         this.sendQueue = [];
-      }
-      if (typeof window !== "undefined") {
-        console.info("[HL-WS] open", { readyState: this.ws?.readyState });
       }
       this.onOpenListeners.forEach((cb) => cb(ev));
       // Re-subscribe to active streams after reconnect
@@ -60,23 +54,9 @@ export class HyperliquidWsClient {
     });
     this.ws.addEventListener("message", (evt) => {
       try {
-        const raw = evt.data as string;
-        if (typeof window !== "undefined") {
-          console.debug("[HL-WS] message", raw.slice(0, 200));
-        }
-        const parsed = JSON.parse(raw) as unknown;
+        const parsed = JSON.parse(evt.data as string) as unknown;
         const snap = this.normalizeL2Book(parsed);
-        if (snap) {
-          if (typeof window !== "undefined") {
-            console.debug("[HL-WS] l2 snap", {
-              coin: snap.coin,
-              bids: snap.levels.bids.length,
-              asks: snap.levels.asks.length,
-              nSigFigs: snap.nSigFigs,
-            });
-          }
-          this.onMessageListeners.forEach((cb) => cb(snap));
-        }
+        if (snap) this.onMessageListeners.forEach((cb) => cb(snap));
       } catch {
         // Ignore malformed
       }
@@ -84,9 +64,6 @@ export class HyperliquidWsClient {
     this.ws.addEventListener("close", (ev) => {
       this.stopHeartbeat();
       this.ws = null;
-      if (typeof window !== "undefined") {
-        console.warn("[HL-WS] close", { code: ev.code, reason: ev.reason });
-      }
       this.onCloseListeners.forEach((cb) => cb(ev));
       if (!this.isManuallyClosed) {
         this.scheduleReconnect();
@@ -94,9 +71,6 @@ export class HyperliquidWsClient {
     });
     this.ws.addEventListener("error", (ev) => {
       // Treat errors as close to trigger reconnect
-      if (typeof window !== "undefined") {
-        console.error("[HL-WS] error", ev);
-      }
       this.onErrorListeners.forEach((cb) => cb(ev));
       this.ws?.close();
     });
@@ -142,9 +116,6 @@ export class HyperliquidWsClient {
       method: "subscribe",
       subscription: { type: "l2Book", coin, ...(nSigFigs ? { nSigFigs } : {}) },
     };
-    if (typeof window !== "undefined") {
-      console.info("[HL-WS] subscribe", payload);
-    }
     // Track subscription for reconnects (dedupe by coin+nSigFigs)
     const exists = this.activeL2Subs.some(
       (s) => s.coin === coin && s.nSigFigs === nSigFigs
@@ -158,9 +129,6 @@ export class HyperliquidWsClient {
       method: "unsubscribe",
       subscription: { type: "l2Book", coin, ...(nSigFigs ? { nSigFigs } : {}) },
     };
-    if (typeof window !== "undefined") {
-      console.info("[HL-WS] unsubscribe", payload);
-    }
     this.activeL2Subs = this.activeL2Subs.filter(
       (s) => !(s.coin === coin && s.nSigFigs === nSigFigs)
     );
@@ -175,14 +143,8 @@ export class HyperliquidWsClient {
   private send(msg: WsOutbound) {
     const data = JSON.stringify(msg);
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      if (typeof window !== "undefined") {
-        console.debug("[HL-WS] send", data);
-      }
       this.ws.send(data);
     } else {
-      if (typeof window !== "undefined") {
-        console.debug("[HL-WS] queue", data);
-      }
       this.sendQueue.push(data);
     }
   }

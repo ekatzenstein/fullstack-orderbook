@@ -12,6 +12,7 @@ export interface OrderBookState {
   connected: boolean;
   frames: number;
   lastUpdateTs: number | null;
+  paused: boolean;
 }
 
 type Subscriber = () => void;
@@ -27,6 +28,7 @@ class OrderBookDataSource {
     connected: false,
     frames: 0,
     lastUpdateTs: null,
+    paused: false,
   };
 
   constructor() {
@@ -45,6 +47,7 @@ class OrderBookDataSource {
         // Optionally, we could track last error
       });
       this.client.onL2Message((snap) => {
+        if (this.current.paused) return;
         // Accept exact match or prefixed variant like BTC-PERP
         const matchesSymbol =
           snap.coin === this.current.symbol ||
@@ -67,6 +70,11 @@ class OrderBookDataSource {
   }
 
   setSymbol(symbol: SymbolCode) {
+    if (this.current.paused) {
+      this.current = { ...this.current, symbol, bids: [], asks: [] };
+      this.emit();
+      return;
+    }
     if (symbol === this.current.symbol) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
     this.current = { ...this.current, symbol, bids: [], asks: [] };
@@ -75,9 +83,28 @@ class OrderBookDataSource {
   }
 
   setSigFigs(nSigFigs: number) {
+    if (this.current.paused) {
+      this.current = { ...this.current, nSigFigs, bids: [], asks: [] };
+      this.emit();
+      return;
+    }
     if (nSigFigs === this.current.nSigFigs) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
     this.current = { ...this.current, nSigFigs, bids: [], asks: [] };
+    this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
+    this.emit();
+  }
+
+  pause() {
+    if (this.current.paused) return;
+    this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
+    this.current = { ...this.current, paused: true };
+    this.emit();
+  }
+
+  resume() {
+    if (!this.current.paused) return;
+    this.current = { ...this.current, paused: false };
     this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
     this.emit();
   }
@@ -112,4 +139,12 @@ export function setOrderBookSymbol(symbol: SymbolCode) {
 
 export function setOrderBookSigFigs(nSigFigs: number) {
   dataSource.setSigFigs(nSigFigs);
+}
+
+export function pauseOrderBook() {
+  dataSource.pause();
+}
+
+export function resumeOrderBook() {
+  dataSource.resume();
 }
