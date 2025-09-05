@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
+/*
+  Base theme tokens (dark by default). Tailwind v4 consumes these via @theme.
+  We keep light mode overrides for future flexibility, but default UX is dark.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surface & text */
+  --background: #0b0f15; /* app background */
+  --foreground: #e6e7eb; /* primary text */
+  --panel: #0f1722; /* panels/cards */
+  --border: #1b2636; /* subtle borders */
+  --muted: #9aa4b2; /* secondary text */
+
+  /* Orderbook semantics */
+  --bid: #24b47e; /* green */
+  --ask: #ef4444; /* red */
+  --accent: #3b82f6; /* blue accent for controls/links */
+
+  /* Depth fills (with alpha) */
+  --depth-bid: color-mix(in oklab, var(--bid) 18%, transparent);
+  --depth-ask: color-mix(in oklab, var(--ask) 18%, transparent);
 }
 
 @theme inline {
+  /* Colors exposed to Tailwind utilities */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-panel: var(--panel);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-bid: var(--bid);
+  --color-ask: var(--ask);
+  --color-accent: var(--accent);
+  --color-depth-bid: var(--depth-bid);
+  --color-depth-ask: var(--depth-ask);
+
+  /* Fonts */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
+/* Optional light mode override */
+@media (prefers-color-scheme: light) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #171717;
+    --panel: #f7f8fa;
+    --border: #e5e7eb;
+    --muted: #6b7280;
+
+    --bid: #158f66;
+    --ask: #dc2626;
+    --accent: #2563eb;
+
+    --depth-bid: color-mix(in oklab, var(--bid) 12%, transparent);
+    --depth-ask: color-mix(in oklab, var(--ask) 12%, transparent);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji",
+    "Segoe UI Emoji";
 }
