@@ -21,6 +21,7 @@ export class HyperliquidWsClient {
   private onErrorListeners: Set<(ev: Event) => void> = new Set();
 
   private onMessageListeners: Set<Listener> = new Set();
+  private activeL2Subs: Array<{ coin: SymbolCode; nSigFigs?: number }> = [];
 
   constructor(network: HyperliquidNetwork = "mainnet") {
     this.url = getHyperliquidWsUrl(network);
@@ -44,6 +45,18 @@ export class HyperliquidWsClient {
         console.info("[HL-WS] open", { readyState: this.ws?.readyState });
       }
       this.onOpenListeners.forEach((cb) => cb(ev));
+      // Re-subscribe to active streams after reconnect
+      for (const sub of this.activeL2Subs) {
+        const payload: WsOutbound = {
+          method: "subscribe",
+          subscription: {
+            type: "l2Book",
+            coin: sub.coin,
+            ...(sub.nSigFigs ? { nSigFigs: sub.nSigFigs } : {}),
+          },
+        };
+        this.send(payload);
+      }
     });
     this.ws.addEventListener("message", (evt) => {
       try {
@@ -132,6 +145,11 @@ export class HyperliquidWsClient {
     if (typeof window !== "undefined") {
       console.info("[HL-WS] subscribe", payload);
     }
+    // Track subscription for reconnects (dedupe by coin+nSigFigs)
+    const exists = this.activeL2Subs.some(
+      (s) => s.coin === coin && s.nSigFigs === nSigFigs
+    );
+    if (!exists) this.activeL2Subs.push({ coin, nSigFigs });
     this.send(payload);
   }
 
@@ -143,6 +161,9 @@ export class HyperliquidWsClient {
     if (typeof window !== "undefined") {
       console.info("[HL-WS] unsubscribe", payload);
     }
+    this.activeL2Subs = this.activeL2Subs.filter(
+      (s) => !(s.coin === coin && s.nSigFigs === nSigFigs)
+    );
     this.send(payload);
   }
 
@@ -209,7 +230,8 @@ export class HyperliquidWsClient {
       const data = anyPayload["data"];
       const channelOk =
         !channel ||
-        (typeof channel === "string" && channel.toLowerCase().includes("l2book"));
+        (typeof channel === "string" &&
+          channel.toLowerCase().includes("l2book"));
       const root =
         channelOk && data && typeof data === "object"
           ? (data as Record<string, unknown>)
@@ -218,7 +240,12 @@ export class HyperliquidWsClient {
       if (!root) return null;
 
       const coin = root["coin"] as unknown;
-      if (coin !== "BTC" && coin !== "ETH" && coin !== "BTC-PERP" && coin !== "ETH-PERP")
+      if (
+        coin !== "BTC" &&
+        coin !== "ETH" &&
+        coin !== "BTC-PERP" &&
+        coin !== "ETH-PERP"
+      )
         return null;
 
       const nSigFigsMaybe = root["nSigFigs"];
@@ -269,9 +296,12 @@ export class HyperliquidWsClient {
       }
 
       // Case C: levels is an array of tuples [px, sz, side]
-      if (Array.isArray(levels) &&
-          (levels.length > 0 && !Array.isArray((levels as unknown[])[0]) ||
-           (Array.isArray((levels as unknown[])[0]) && typeof (levels as unknown[])[0][0] !== 'object'))
+      if (
+        Array.isArray(levels) &&
+        (levels as unknown[]).length > 0 &&
+        (!Array.isArray((levels as unknown[])[0]) ||
+          (Array.isArray((levels as unknown[])[0]) &&
+            typeof ((levels as unknown[])[0] as unknown[])[0] !== "object"))
       ) {
         const bids: L2Level[] = [];
         const asks: L2Level[] = [];
@@ -304,14 +334,14 @@ export class HyperliquidWsClient {
         const bids: L2Level[] = [];
         const asks: L2Level[] = [];
         for (const obj of rawBids) {
-          if (obj && typeof obj === 'object') {
+          if (obj && typeof obj === "object") {
             const px = toNumber((obj as any).px);
             const sz = toNumber((obj as any).sz);
             if (px !== null && sz !== null) bids.push([px, sz]);
           }
         }
         for (const obj of rawAsks) {
-          if (obj && typeof obj === 'object') {
+          if (obj && typeof obj === "object") {
             const px = toNumber((obj as any).px);
             const sz = toNumber((obj as any).sz);
             if (px !== null && sz !== null) asks.push([px, sz]);

@@ -11,6 +11,16 @@ export function OrderBookPreview() {
   const { symbol, nSigFigs, bids, asks, connected, frames, lastUpdateTs } =
     useOrderBookState();
 
+  const fmt = React.useCallback(
+    (value: number) => {
+      // Format price by significant figures; default to no-op if invalid
+      if (!Number.isFinite(value)) return String(value);
+      const digits = Math.max(1, Math.min(8, nSigFigs ?? 2));
+      return Number(value).toPrecision(digits);
+    },
+    [nSigFigs]
+  );
+
   return (
     <section className="rounded-md border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
@@ -54,8 +64,8 @@ export function OrderBookPreview() {
           <div className="divide-y divide-border/60">
             {(bids ?? []).slice(0, 10).map(([px, sz]) => (
               <div key={`bid-${px}`} className="flex justify-between py-0.5">
-                <span className="text-bid">{px}</span>
-                <span className="text-foreground/80">{sz}</span>
+                <span className="text-bid">{fmt(px)}</span>
+                <span className="text-foreground/80">{fmt(sz)}</span>
               </div>
             ))}
           </div>
@@ -65,8 +75,8 @@ export function OrderBookPreview() {
           <div className="divide-y divide-border/60">
             {(asks ?? []).slice(0, 10).map(([px, sz]) => (
               <div key={`ask-${px}`} className="flex justify-between py-0.5">
-                <span className="text-ask">{px}</span>
-                <span className="text-foreground/80">{sz}</span>
+                <span className="text-ask">{fmt(px)}</span>
+                <span className="text-foreground/80">{fmt(sz)}</span>
               </div>
             ))}
           </div>

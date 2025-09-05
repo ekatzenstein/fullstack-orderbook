@@ -62,39 +62,23 @@ class OrderBookDataSource {
       });
       this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
       // Also attempt common perp suffix variant
-      this.client.subscribeL2Book(
-        `${this.current.symbol}-PERP` as any,
-        this.current.nSigFigs
-      );
+      // Keep it simple: subscribe to plain coin only
     }
   }
 
   setSymbol(symbol: SymbolCode) {
     if (symbol === this.current.symbol) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.client.unsubscribeL2Book(
-      `${this.current.symbol}-PERP` as any,
-      this.current.nSigFigs
-    );
     this.current = { ...this.current, symbol, bids: [], asks: [] };
     this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.client.subscribeL2Book(`${symbol}-PERP` as any, this.current.nSigFigs);
     this.emit();
   }
 
   setSigFigs(nSigFigs: number) {
     if (nSigFigs === this.current.nSigFigs) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.client.unsubscribeL2Book(
-      `${this.current.symbol}-PERP` as any,
-      this.current.nSigFigs
-    );
     this.current = { ...this.current, nSigFigs, bids: [], asks: [] };
     this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.client.subscribeL2Book(
-      `${this.current.symbol}-PERP` as any,
-      this.current.nSigFigs
-    );
     this.emit();
   }
 
