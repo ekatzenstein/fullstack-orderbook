@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SIG_FIGS } from "@/config/constants";
 
 function useDepthScales(bids: [number, number][], asks: [number, number][]) {
   const maxSz = React.useMemo(() => {
@@ -31,7 +32,8 @@ function useDepthScales(bids: [number, number][], asks: [number, number][]) {
 }
 
 export function OrderBook() {
-  const { symbol, nSigFigs, displayCurrency, bids, asks } = useOrderBookState();
+  const { symbol, nSigFigs, displayCurrency, bids, asks, loading } =
+    useOrderBookState();
 
   // Build ladders from nearest levels (no step bucketing): 12 asks above, 12 bids below
   const { ladderAsks, ladderBids, bestBid, bestAsk } = React.useMemo(() => {
@@ -87,6 +89,19 @@ export function OrderBook() {
     [nSigFigs]
   );
 
+  // Compact formatter (K/M/B) with fallback to decimals (no scientific)
+  const fmtCompact = React.useCallback((n: number) => {
+    if (!Number.isFinite(n)) return String(n);
+    const abs = Math.abs(n);
+    if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+    if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+    if (abs >= 1_000) return `${(n / 1_000).toFixed(2)}K`;
+    const maxDecimals = 2;
+    return new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: maxDecimals,
+    }).format(n);
+  }, []);
+
   const Row = React.useCallback(
     ({
       side,
@@ -130,31 +145,15 @@ export function OrderBook() {
             {fmtPrice(px)}
           </span>
           <span className="text-foreground/80 text-center justify-self-center">
-            {displayCurrency === "USD"
-              ? Math.abs(sizeDisp) >= 1_000_000_000
-                ? `${(sizeDisp / 1_000_000_000).toFixed(2)}B`
-                : Math.abs(sizeDisp) >= 1_000_000
-                ? `${(sizeDisp / 1_000_000).toFixed(2)}M`
-                : Math.abs(sizeDisp) >= 1_000
-                ? `${(sizeDisp / 1_000).toFixed(2)}K`
-                : new Intl.NumberFormat("en-US").format(sizeDisp)
-              : Number(sizeDisp).toExponential(1)}
+            {fmtCompact(sizeDisp)}
           </span>
           <span className="text-foreground/90 font-medium text-right justify-self-end">
-            {displayCurrency === "USD"
-              ? Math.abs(totalDisp) >= 1_000_000_000
-                ? `${(totalDisp / 1_000_000_000).toFixed(2)}B`
-                : Math.abs(totalDisp) >= 1_000_000
-                ? `${(totalDisp / 1_000_000).toFixed(2)}M`
-                : Math.abs(totalDisp) >= 1_000
-                ? `${(totalDisp / 1_000).toFixed(2)}K`
-                : new Intl.NumberFormat("en-US").format(totalDisp)
-              : Number(totalDisp).toExponential(1)}
+            {fmtCompact(totalDisp)}
           </span>
         </div>
       );
     },
-    [fmtPrice, displayCurrency]
+    [fmtPrice, displayCurrency, fmtCompact]
   );
 
   const spread = bestBid != null && bestAsk != null ? bestAsk - bestBid : null;
@@ -168,7 +167,7 @@ export function OrderBook() {
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-medium">Orders</h2>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">Symbol</label>
+          <label className="text-sm text-muted-foreground">Symbol</label>
           <Select
             value={symbol}
             onValueChange={(v) => setOrderBookSymbol(v as any)}
@@ -187,13 +186,17 @@ export function OrderBook() {
       <div className="mt-3 grid grid-cols-[1fr_1fr_1fr] text-[11px] text-muted-foreground px-1">
         <div className="justify-self-start">Price</div>
         <div className="text-center justify-self-center">
-          Size ({displayCurrency === "USD" ? "USD" : symbol})
+          Size ({displayCurrency === "USD" ? "USD" : `${symbol}`})
         </div>
         <div className="text-right justify-self-end">
-          Total ({displayCurrency === "USD" ? "USD" : symbol})
+          Total ({displayCurrency === "USD" ? "USD" : `${symbol}`})
         </div>
       </div>
-      <div className="mt-1 text-xs space-y-0.5">
+      <div
+        className={`mt-1 text-xs space-y-0.5 ${
+          loading ? "opacity-60 blur-[0.2px]" : "opacity-100"
+        } relative min-h-[520px]`}
+      >
         {ladderAsks.map(([px, sz], i) => (
           <Row
             key={`ask-${px}`}
@@ -204,17 +207,19 @@ export function OrderBook() {
             max={maxCumAsk}
           />
         ))}
-        <div className="my-2 flex bg-input/30 items-center justify-between px-2 py-1">
-          <span>Spread</span>
-          <span className="flex items-center gap-2">
-            {spread != null ? fmtPrice(spread) : "-"}
-            {spreadPct != null ? (
-              <span className="text-foreground/70">
-                {spreadPct.toFixed(2)}%
-              </span>
-            ) : null}
-          </span>
-        </div>
+        {ladderAsks.length > 0 && ladderBids.length > 0 ? (
+          <div className="my-2 flex bg-input/30 items-center justify-between px-2 py-1">
+            <span>Spread</span>
+            <span className="flex items-center gap-2">
+              {spread != null ? fmtPrice(spread) : "-"}
+              {spreadPct != null ? (
+                <span className="text-foreground/70">
+                  {spreadPct.toFixed(2)}%
+                </span>
+              ) : null}
+            </span>
+          </div>
+        ) : null}
         {ladderBids.map(([px, sz], i) => (
           <Row
             key={`bid-${px}`}
@@ -225,25 +230,26 @@ export function OrderBook() {
             max={maxCumBid}
           />
         ))}
+        {loading ? (
+          <div className="pointer-events-none absolute inset-0">
+            <div className="h-full w-full bg-gradient-to-b from-transparent via-input/40 to-transparent animate-pulse" />
+          </div>
+        ) : null}
       </div>
       {/* Footer controls: nSigFigs and display */}
       <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1">
           <button
-            className={`px-2 py-1 rounded-sm text-xs hover:cursor-pointer ${
-              displayCurrency === "USD"
-                ? "bg-input/50 text-primary"
-                : "bg-transparent text-muted-foreground"
+            className={`px-2 py-1 rounded-sm text-sm hover:cursor-pointer ${
+              displayCurrency === "USD" ? "bg-input/50" : "bg-transparent"
             }`}
             onClick={() => setOrderBookDisplayCurrency("USD")}
           >
             USD
           </button>
           <button
-            className={`px-2 py-1 rounded-sm text-xs hover:cursor-pointer ${
-              displayCurrency === "COIN"
-                ? "bg-input/50 text-primary"
-                : "bg-transparent text-muted-foreground"
+            className={`px-2 py-1 rounded-sm text-sm hover:cursor-pointer ${
+              displayCurrency === "COIN" ? "bg-input/50" : "bg-transparent"
             }`}
             onClick={() => setOrderBookDisplayCurrency("COIN")}
           >
@@ -251,7 +257,7 @@ export function OrderBook() {
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <span>nSigFigs</span>
+          <span className="text-sm">nSigFigs</span>
           <Select
             value={String(nSigFigs)}
             onValueChange={(v) => setOrderBookSigFigs(Number(v))}
@@ -260,10 +266,11 @@ export function OrderBook() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="2">2</SelectItem>
-              <SelectItem value="3">3</SelectItem>
-              <SelectItem value="4">4</SelectItem>
-              <SelectItem value="5">5</SelectItem>
+              {SIG_FIGS.map((nSigFig) => (
+                <SelectItem key={nSigFig} value={String(nSigFig)}>
+                  {nSigFig}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

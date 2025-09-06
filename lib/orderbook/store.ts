@@ -9,12 +9,12 @@ export interface OrderBookState {
   nSigFigs: number;
   displayCurrency: "USD" | "COIN";
   priceDecimals: number;
-  priceStep: number;
   bids: L2Level[];
   asks: L2Level[];
   connected: boolean;
   frames: number;
   lastUpdateTs: number | null;
+  loading: boolean;
 }
 
 type Subscriber = () => void;
@@ -25,21 +25,21 @@ class OrderBookDataSource {
   private current: OrderBookState = {
     symbol: "BTC",
     nSigFigs: 3,
-    displayCurrency: "COIN",
+    displayCurrency: "USD",
     priceDecimals: 1,
-    priceStep: 0.1,
     bids: [],
     asks: [],
     connected: false,
     frames: 0,
     lastUpdateTs: null,
+    loading: true,
   };
 
   constructor() {
     if (typeof window !== "undefined") {
       this.client.connect();
       this.client.onOpen(() => {
-        this.current = { ...this.current, connected: true };
+        this.current = { ...this.current, connected: true, loading: true };
         this.emit();
       });
       this.client.onClose((ev) => {
@@ -48,7 +48,6 @@ class OrderBookDataSource {
       });
       this.client.onError?.((ev) => {
         // Surface disconnect via connected flag already handled in onClose
-        // Optionally, we could track last error
       });
       this.client.onL2Message((snap) => {
         // Accept exact match or prefixed variant like BTC-PERP
@@ -63,30 +62,28 @@ class OrderBookDataSource {
           asks: snap.levels.asks,
           frames: this.current.frames + 1,
           lastUpdateTs: Date.now(),
+          loading: false,
         };
         this.emit();
       });
       this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
-      // Also attempt common perp suffix variant
-      // Keep it simple: subscribe to plain coin only
     }
   }
 
   setSymbol(symbol: SymbolCode) {
     if (symbol === this.current.symbol) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.current = { ...this.current, symbol, bids: [], asks: [] };
-    this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
+    this.current = { ...this.current, symbol, loading: true };
     this.emit();
+    this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
   }
 
   setSigFigs(nSigFigs: number) {
-    const clamped = Math.max(2, Math.min(5, Math.round(nSigFigs)));
-    if (clamped === this.current.nSigFigs) return;
+    if (nSigFigs === this.current.nSigFigs) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.current = { ...this.current, nSigFigs: clamped, bids: [], asks: [] };
-    this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
+    this.current = { ...this.current, nSigFigs, loading: true };
     this.emit();
+    this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
   }
 
   setDisplayCurrency(currency: "USD" | "COIN") {
@@ -99,13 +96,6 @@ class OrderBookDataSource {
     const clamped = Math.max(0, Math.min(8, Math.round(decimals)));
     if (clamped === this.current.priceDecimals) return;
     this.current = { ...this.current, priceDecimals: clamped };
-    this.emit();
-  }
-
-  setPriceStep(step: number) {
-    if (!Number.isFinite(step) || step <= 0) return;
-    if (step === this.current.priceStep) return;
-    this.current = { ...this.current, priceStep: step };
     this.emit();
   }
 
@@ -125,7 +115,6 @@ class OrderBookDataSource {
 const dataSource = new OrderBookDataSource();
 
 export function useOrderBookState(): OrderBookState {
-  // Provide getServerSnapshot to avoid SSR hydration warnings.
   return useSyncExternalStore(
     dataSource.subscribe,
     dataSource.getSnapshot,
@@ -148,9 +137,3 @@ export function setOrderBookDisplayCurrency(currency: "USD" | "COIN") {
 export function setOrderBookPriceDecimals(decimals: number) {
   dataSource.setPriceDecimals(decimals);
 }
-
-export function setOrderBookPriceStep(step: number) {
-  dataSource.setPriceStep(step);
-}
-
-// Pause/resume removed
