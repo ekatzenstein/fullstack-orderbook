@@ -1,14 +1,5 @@
 "use client";
 
-import * as React from "react";
-import { scaleLinear } from "d3-scale";
-import { motion, AnimatePresence } from "motion/react";
-import {
-  useOrderBookState,
-  setOrderBookSymbol,
-  setOrderBookDisplayCurrency,
-  setOrderBookSigFigs,
-} from "@/lib/orderbook/store";
 import {
   Select,
   SelectContent,
@@ -17,19 +8,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SIG_FIGS } from "@/config/constants";
-
-function useDepthScales(bids: [number, number][], asks: [number, number][]) {
-  const maxSz = React.useMemo(() => {
-    const b = bids.length ? Math.max(...bids.map(([, sz]) => sz)) : 0;
-    const a = asks.length ? Math.max(...asks.map(([, sz]) => sz)) : 0;
-    return Math.max(b, a, 1);
-  }, [bids, asks]);
-  const x = React.useMemo(
-    () => scaleLinear().domain([0, maxSz]).range([0, 100]),
-    [maxSz]
-  );
-  return x;
-}
+import {
+  setOrderBookDisplayCurrency,
+  setOrderBookSigFigs,
+  setOrderBookSymbol,
+  useOrderBookState,
+} from "@/lib/orderbook/store";
+import { AnimatePresence, motion } from "motion/react";
+import * as React from "react";
 
 export function OrderBook() {
   const { symbol, nSigFigs, displayCurrency, bids, asks, loading } =

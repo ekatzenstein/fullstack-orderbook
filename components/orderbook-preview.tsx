@@ -15,8 +15,7 @@ export function OrderBookPreview() {
     (value: number) => {
       // Format price by significant figures; default to no-op if invalid
       if (!Number.isFinite(value)) return String(value);
-      const digits = Math.max(1, Math.min(8, nSigFigs ?? 2));
-      return Number(value).toPrecision(digits);
+      return Number(value).toPrecision(nSigFigs);
     },
     [nSigFigs]
   );

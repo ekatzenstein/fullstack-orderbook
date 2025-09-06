@@ -93,9 +93,8 @@ class OrderBookDataSource {
   }
 
   setPriceDecimals(decimals: number) {
-    const clamped = Math.max(0, Math.min(8, Math.round(decimals)));
-    if (clamped === this.current.priceDecimals) return;
-    this.current = { ...this.current, priceDecimals: clamped };
+    if (decimals === this.current.priceDecimals) return;
+    this.current = { ...this.current, priceDecimals: decimals };
     this.emit();
   }
 
