@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fullstack OrderBook
 
-## Getting Started
+A high-performance, real-time order book built with Next.js (App Router) and Tailwind, streaming live L2 data via WebSocket and rendering a smooth, readable, and compact depth view.
 
-First, run the development server:
+## Features
+
+- Live L2 order book (Hyperliquid WebSocket)
+  - Typed WebSocket client with reconnect and message queueing
+  - Symbol switching (BTC / ETH)
+  - Significant digits (nSigFigs) control (2–5)
+- Order book UI
+  - Single-column layout: asks (top) → spread → bids (bottom)
+  - Cumulative depth bars (inverted pyramid) with Motion animations
+  - Column headers: Price, Size, Total
+  - Price formatted by significant digits; Size/Total formatted compactly (K/M/B)
+  - Display toggle (USD or current symbol) controls Size/Total units
+  - Smooth updates: keeps previous book while loading; subtle blur/pulse skeleton; stable height on first load
+- Theming and UI polish
+  - Tailwind v4 design tokens, dark-first theme
+  - shadcn components with neutral hover/selected states (no blue)
+
+## Tech Stack
+
+- Next.js (App Router, React Server Components)
+- TypeScript
+- Tailwind CSS v4
+- Motion (Framer Motion)
+- shadcn/ui (Select, Button, etc.)
+
+## Project Structure (highlights)
+
+- `app/` — App Router pages, layout, and global styles
+- `components/orderbook.tsx` — Main order book widget
+- `components/orderbook-row.tsx` — Row rendering (depth bar + values)
+- `lib/orderbook/store.ts` — Client-side store (useSyncExternalStore)
+- `lib/hyperliquid/` — WebSocket endpoints, types, and client
+- `components/ui/` — shadcn UI primitives
+
+## Running Locally
+
+Install dependencies and start the dev server:
 
 ```bash
-npm run dev
-# or
+# using yarn
+yarn
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# using npm
+npm install
+npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Configuration
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Default symbol: BTC
+- Default display: USD
+- Default nSigFigs: 3 (clamped 2–5)
+- WebSocket: mainnet `wss://api.hyperliquid.xyz/ws`
 
-## Learn More
+You can change defaults in `lib/orderbook/store.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+## Notes on Performance & UX
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- The order book keeps the previous snapshot visible while new data streams in to avoid flicker.
+- A subtle blur and pulsing overlay indicate loading without collapsing height.
+- Depth bars scale by cumulative side liquidity to convey ladder shape at a glance.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
