@@ -27,7 +27,7 @@ class OrderBookDataSource {
   private listeners: Set<Subscriber> = new Set();
   private current: OrderBookState = {
     symbol: "BTC",
-    nSigFigs: 4,
+    nSigFigs: 5,
     displayCurrency: "USD",
     priceDecimals: 1,
     bids: [],

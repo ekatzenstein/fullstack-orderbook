@@ -56,7 +56,7 @@ Then open `http://localhost:3000`.
 
 - Default symbol: BTC
 - Default display: USD
-- Default nSigFigs: 4 (clamped 2–5)
+- Default nSigFigs: 5 (clamped 3–5)
 - WebSocket: mainnet `wss://api.hyperliquid.xyz/ws`
 
 You can change defaults in `lib/orderbook/store.ts`.
