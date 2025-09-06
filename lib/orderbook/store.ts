@@ -19,6 +19,9 @@ export interface OrderBookState {
 
 type Subscriber = () => void;
 
+/**
+ * Note: I typically would use Zustand with Immer for a store, but OOO may be more appropriate for a Webhook implementation.
+ */
 class OrderBookDataSource {
   private client = new HyperliquidWsClient("mainnet");
   private listeners: Set<Subscriber> = new Set();

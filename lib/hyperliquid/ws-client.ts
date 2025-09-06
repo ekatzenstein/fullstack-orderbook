@@ -1,11 +1,5 @@
 import { getHyperliquidWsUrl, HyperliquidNetwork } from "./endpoints";
-import type {
-  SymbolCode,
-  WsInbound,
-  WsOutbound,
-  L2Snapshot,
-  L2Level,
-} from "./types";
+import type { L2Level, L2Snapshot, SymbolCode, WsOutbound } from "./types";
 
 type Listener = (snapshot: L2Snapshot) => void;
 

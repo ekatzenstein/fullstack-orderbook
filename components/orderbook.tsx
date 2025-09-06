@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderBookRow } from "@/components/orderbook-row";
 import {
   Select,
   SelectContent,
@@ -14,7 +15,6 @@ import {
   setOrderBookSymbol,
   useOrderBookState,
 } from "@/lib/orderbook/store";
-import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 
 export function OrderBook() {
@@ -88,59 +88,7 @@ export function OrderBook() {
     }).format(n);
   }, []);
 
-  const Row = React.useCallback(
-    ({
-      side,
-      px,
-      sz,
-      cum,
-      max,
-    }: {
-      side: "bid" | "ask";
-      px: number;
-      sz: number;
-      cum: number;
-      max: number;
-    }) => {
-      const widthPct = Math.max(0, Math.min(100, (cum / (max || 1)) * 100));
-      const totalUsd = px * sz;
-      const sizeDisp = displayCurrency === "USD" ? totalUsd : sz;
-      const totalDisp = displayCurrency === "USD" ? totalUsd : sz * px; // same for USD here
-      return (
-        <div className="relative grid grid-cols-[1fr_1fr_1fr] items-center gap-3 py-0.5">
-          <div className="absolute inset-0 w-full h-full">
-            <AnimatePresence initial={false}>
-              <motion.div
-                key={`${side}-${px}`}
-                initial={{ width: 0, opacity: 0.8 }}
-                animate={{ width: `${widthPct}%`, opacity: 0.8 }}
-                exit={{ width: 0, opacity: 0.2 }}
-                transition={{ type: "spring", stiffness: 260, damping: 30 }}
-                className={
-                  side === "bid" ? "h-full bg-depth-bid" : "h-full bg-depth-ask"
-                }
-                style={{ height: "calc(100% - 2px)" }}
-              />
-            </AnimatePresence>
-          </div>
-          <span
-            className={`px-1 justify-self-start ${
-              side === "bid" ? "text-bid" : "text-ask"
-            }`}
-          >
-            {fmtPrice(px)}
-          </span>
-          <span className="text-foreground/80 text-center justify-self-center">
-            {fmtCompact(sizeDisp)}
-          </span>
-          <span className="text-foreground/90 font-medium text-right justify-self-end">
-            {fmtCompact(totalDisp)}
-          </span>
-        </div>
-      );
-    },
-    [fmtPrice, displayCurrency, fmtCompact]
-  );
+  // Row extracted to `OrderBookRow`
 
   const spread = bestBid != null && bestAsk != null ? bestAsk - bestBid : null;
   const spreadPct =
@@ -184,13 +132,16 @@ export function OrderBook() {
         } relative min-h-[520px]`}
       >
         {ladderAsks.map(([px, sz], i) => (
-          <Row
+          <OrderBookRow
             key={`ask-${px}`}
             side="ask"
             px={px}
             sz={sz}
             cum={cumAsks[i]}
             max={maxCumAsk}
+            displayCurrency={displayCurrency}
+            fmtPrice={fmtPrice}
+            fmtCompact={fmtCompact}
           />
         ))}
         {ladderAsks.length > 0 && ladderBids.length > 0 ? (
@@ -207,13 +158,16 @@ export function OrderBook() {
           </div>
         ) : null}
         {ladderBids.map(([px, sz], i) => (
-          <Row
+          <OrderBookRow
             key={`bid-${px}`}
             side="bid"
             px={px}
             sz={sz}
             cum={cumBids[i]}
             max={maxCumBid}
+            displayCurrency={displayCurrency}
+            fmtPrice={fmtPrice}
+            fmtCompact={fmtCompact}
           />
         ))}
         {loading ? (
