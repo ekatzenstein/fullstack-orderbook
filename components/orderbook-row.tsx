@@ -26,8 +26,8 @@ export function OrderBookRow({
 }: OrderBookRowProps) {
   const widthPct = Math.max(0, Math.min(100, (cum / (max || 1)) * 100));
   const totalUsd = px * sz;
-  const sizeDisp = displayCurrency === "USD" ? totalUsd : sz;
-  const totalDisp = displayCurrency === "USD" ? totalUsd : sz * px;
+  const sizeDisp = displayCurrency === "USD" ? sz * px : sz;
+  const totalDisp = displayCurrency === "USD" ? px * cum : cum;
 
   return (
     <div className="relative grid grid-cols-[1fr_1fr_1fr] items-center gap-3 py-0.5">
