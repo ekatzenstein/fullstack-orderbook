@@ -8,12 +8,13 @@ export interface OrderBookState {
   symbol: SymbolCode;
   nSigFigs: number;
   displayCurrency: "USD" | "COIN";
+  priceDecimals: number;
+  priceStep: number;
   bids: L2Level[];
   asks: L2Level[];
   connected: boolean;
   frames: number;
   lastUpdateTs: number | null;
-  paused: boolean;
 }
 
 type Subscriber = () => void;
@@ -23,14 +24,15 @@ class OrderBookDataSource {
   private listeners: Set<Subscriber> = new Set();
   private current: OrderBookState = {
     symbol: "BTC",
-    nSigFigs: 2,
+    nSigFigs: 3,
     displayCurrency: "COIN",
+    priceDecimals: 1,
+    priceStep: 0.1,
     bids: [],
     asks: [],
     connected: false,
     frames: 0,
     lastUpdateTs: null,
-    paused: false,
   };
 
   constructor() {
@@ -49,7 +51,6 @@ class OrderBookDataSource {
         // Optionally, we could track last error
       });
       this.client.onL2Message((snap) => {
-        if (this.current.paused) return;
         // Accept exact match or prefixed variant like BTC-PERP
         const matchesSymbol =
           snap.coin === this.current.symbol ||
@@ -72,11 +73,6 @@ class OrderBookDataSource {
   }
 
   setSymbol(symbol: SymbolCode) {
-    if (this.current.paused) {
-      this.current = { ...this.current, symbol, bids: [], asks: [] };
-      this.emit();
-      return;
-    }
     if (symbol === this.current.symbol) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
     this.current = { ...this.current, symbol, bids: [], asks: [] };
@@ -85,14 +81,10 @@ class OrderBookDataSource {
   }
 
   setSigFigs(nSigFigs: number) {
-    if (this.current.paused) {
-      this.current = { ...this.current, nSigFigs, bids: [], asks: [] };
-      this.emit();
-      return;
-    }
-    if (nSigFigs === this.current.nSigFigs) return;
+    const clamped = Math.max(2, Math.min(5, Math.round(nSigFigs)));
+    if (clamped === this.current.nSigFigs) return;
     this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.current = { ...this.current, nSigFigs, bids: [], asks: [] };
+    this.current = { ...this.current, nSigFigs: clamped, bids: [], asks: [] };
     this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
     this.emit();
   }
@@ -103,17 +95,17 @@ class OrderBookDataSource {
     this.emit();
   }
 
-  pause() {
-    if (this.current.paused) return;
-    this.client.unsubscribeL2Book(this.current.symbol, this.current.nSigFigs);
-    this.current = { ...this.current, paused: true };
+  setPriceDecimals(decimals: number) {
+    const clamped = Math.max(0, Math.min(8, Math.round(decimals)));
+    if (clamped === this.current.priceDecimals) return;
+    this.current = { ...this.current, priceDecimals: clamped };
     this.emit();
   }
 
-  resume() {
-    if (!this.current.paused) return;
-    this.current = { ...this.current, paused: false };
-    this.client.subscribeL2Book(this.current.symbol, this.current.nSigFigs);
+  setPriceStep(step: number) {
+    if (!Number.isFinite(step) || step <= 0) return;
+    if (step === this.current.priceStep) return;
+    this.current = { ...this.current, priceStep: step };
     this.emit();
   }
 
@@ -153,10 +145,12 @@ export function setOrderBookDisplayCurrency(currency: "USD" | "COIN") {
   dataSource.setDisplayCurrency(currency);
 }
 
-export function pauseOrderBook() {
-  dataSource.pause();
+export function setOrderBookPriceDecimals(decimals: number) {
+  dataSource.setPriceDecimals(decimals);
 }
 
-export function resumeOrderBook() {
-  dataSource.resume();
+export function setOrderBookPriceStep(step: number) {
+  dataSource.setPriceStep(step);
 }
+
+// Pause/resume removed

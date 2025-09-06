@@ -2,7 +2,7 @@ import { OrderBook } from "@/components/orderbook";
 
 export default function Home() {
   return (
-    <div className="grid gap-6">
+    <div className="w-full flex justify-center">
       <OrderBook />
     </div>
   );
